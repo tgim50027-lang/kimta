@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중학 사회 탐구: 인구 변화와 도시 문제 (학생용)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #fdf6f6 0%, #f3f0fa 50%, #e6f5f4 100%);
+            background-attachment: fixed;
+        }
+        
+        .watercolor-title {
+            font-family: 'Gowun Dodum', sans-serif;
+            background: linear-gradient(45deg, #a78bfa, #f472b6, #2dd4bf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .blobs-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+        }
+
+        .blob-1 { width: 500px; height: 500px; background-color: #fce7f3; top: -100px; left: -100px; }
+        .blob-2 { width: 600px; height: 600px; background-color: #ede9fe; bottom: -200px; right: -100px; }
+        .blob-3 { width: 400px; height: 400px; background-color: #ccfbf1; top: 40%; left: 30%; }
+    </style>
+</head>
+<body class="text-slate-700 min-h-screen relative pb-12">
+
+    <div class="blobs-container">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- 헤더 영역 -->
+    <header class="bg-white/70 backdrop-blur-md shadow-sm border-b border-pink-100/50 py-6 px-6 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="bg-gradient-to-tr from-pink-200 via-purple-200 to-teal-200 p-3 rounded-2xl shadow-sm">
+                    <i class="fa-solid fa-user-graduate text-slate-700 text-2xl"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-wider">중학교 사회 [인구 변화와 도시 문제]</span>
+                    <h1 class="text-2xl md:text-3xl font-black mt-1.5 tracking-tight watercolor-title">학생 탐구 시뮬레이터</h1>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="resetSimulator()" class="bg-white/80 hover:bg-slate-50 text-slate-700 border border-slate-200 transition-all px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-arrow-rotate-left"></i> 설정 초기화
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 알림 시스템용 Toast -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- 왼쪽 패널: 시뮬레이터 설정 및 통계 검색 (5/12) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- 모드 탭 스위치 -->
+            <div class="bg-white/80 backdrop-blur-md p-1.5 rounded-2xl shadow-sm border border-pink-100/30 flex gap-1">
+                <button onclick="switchMode('sim')" id="tab-sim" class="flex-1 py-3 text-center rounded-xl text-sm font-bold transition-all duration-300 bg-gradient-to-r from-pink-100/80 to-purple-100/80 text-slate-800 shadow-sm border border-pink-100/20">
+                    <i class="fa-solid fa-sliders mr-1.5 text-pink-500"></i> 가상 시뮬레이터
+                </button>
+                <button onclick="switchMode('kosis')" id="tab-kosis" class="flex-1 py-3 text-center rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 hover:bg-slate-50">
+                    <i class="fa-solid fa-chart-line mr-1.5 text-teal-500"></i> KOSIS 실제 통계 탐색
+                </button>
+            </div>
+
+            <!-- 영역 A: 가상 시뮬레이터 패널 -->
+            <div id="panel-sim" class="bg-white/85 backdrop-blur-md rounded-3xl p-6 shadow-md border border-pink-100/40 space-y-6">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full bg-pink-300"></span>
+                        가상 인구 변수 조절
+                    </h2>
+                    <p class="text-xs text-slate-500">출생률(자연적 증감)과 전입률(사회적 증감)을 직접 변화시키며 미래 도시의 운명을 예측해 봅니다.</p>
+                </div>
+                
+                <!-- 변수 1: 출생률 -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="font-bold text-slate-700 flex items-center gap-2 text-sm">
+                            <span class="w-2.5 h-2.5 rounded-full bg-pink-400"></span>
+                            변수 ①: 연간 출생률 <span class="text-[11px] text-slate-400 font-normal">(천 명당)</span>
+                        </label>
+                        <span id="birth-val" class="font-extrabold text-pink-600 bg-pink-50 border border-pink-100 px-2.5 py-0.5 rounded-lg text-xs">12 명</span>
+                    </div>
+                    <input type="range" id="birth-rate" min="2" max="30" value="12" step="1" 
+                           class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-pink-400"
+                           oninput="updateSimulator()">
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span>초저출산 (2명)</span>
+                        <span>평균치 (12명)</span>
+                        <span>다자녀형 (30명)</span>
+                    </div>
+                </div>
+
+                <!-- 변수 2: 전입률 -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="font-bold text-slate-700 flex items-center gap-2 text-sm">
+                            <span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+                            변수 ②: 연간 전입률 <span class="text-[11px] text-slate-400 font-normal">(현재 도시 인구 대비)</span>
+                        </label>
+                        <span id="move-val" class="font-extrabold text-teal-600 bg-teal-50 border border-teal-100 px-2.5 py-0.5 rounded-lg text-xs">+2 %</span>
+                    </div>
+                    <input type="range" id="move-in-rate" min="-8" max="15" value="2" step="1" 
+                           class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-teal-400"
+                           oninput="updateSimulator()">
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span>인구 유출 (-8%)</span>
+                        <span>유지 (0%)</span>
+                        <span>급격한 유입 (+15%)</span>
+                    </div>
+                </div>
+
+                <!-- 고정치 안내 -->
+                <div class="bg-pink-50/30 p-3.5 rounded-2xl border border-pink-100/50 text-xs text-slate-500 space-y-1">
+                    <span class="font-bold text-slate-700 block">📌 고정 적용 변수 정보</span>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-500">
+                        <span>• 기준 사망률: 연간 8명 / 천 명</span>
+                        <span>• 기준 전출률: 연간 2% 고정</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 영역 B: KOSIS 실제 통계 탐색 패널 -->
+            <div id="panel-kosis" class="hidden bg-white/85 backdrop-blur-md rounded-3xl p-6 shadow-md border border-teal-100/40 space-y-5">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-800 mb-1 flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full bg-teal-300"></span>
+                        실제 통계 데이터 탐색
+                    </h2>
+                    <p class="text-xs text-slate-500">국가통계포털(KOSIS) 기준 한국 지역의 실제 출산율 및 통계를 대조해봅니다.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-600">행정구역(지역)</label>
+                        <select id="kosis-region" onchange="updateKosisVisualization()" class="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-teal-400 outline-none">
+                            <option value="seoul" selected>서울특별시</option>
+                            <option value="gyeonggi">경기도</option>
+                            <option value="sejong">세종특별자치시</option>
+                            <option value="busan">부산광역시</option>
+                            <option value="jeonnam">전라남도</option>
+                            <option value="korea">대한민국 전체</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-600">기준 연도</label>
+                        <select id="kosis-year-range" onchange="updateKosisVisualization()" class="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-teal-400 outline-none">
+                            <option value="all" selected>최근 6개년 (2019-2024)</option>
+                            <option value="recent">최근 3개년 (2022-2024)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-teal-50/30 p-4 rounded-2xl border border-teal-100/50 flex justify-between items-center">
+                    <div>
+                        <span class="text-[11px] text-slate-500 block" id="current-kosis-region-label">서울특별시</span>
+                        <span class="font-bold text-slate-800 text-sm">합계출산율 평균</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-black text-teal-600" id="current-kosis-avg-val">0.59</span>
+                        <span class="text-xs text-slate-400 block">명 (인구 유지선 2.1명 대비)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 현재 도시 진단 카드 -->
+            <div id="city-state-card" class="bg-white/85 backdrop-blur-md rounded-3xl p-6 shadow-md border border-pink-100/40 transition-all duration-300">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-pink-500" id="city-type-badge">도시 분석</span>
+                        <h3 class="text-2xl font-black mt-1 text-slate-800" id="city-name-display">안정형 도시</h3>
+                    </div>
+                    <div id="city-icon-container" class="p-3 rounded-2xl bg-gradient-to-tr from-pink-100 to-purple-100 text-purple-600 text-2xl shadow-sm">
+                        <i class="fa-solid fa-city"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500 leading-relaxed" id="city-status-desc">현재 도시의 상태가 안정적으로 유지되고 있으며, 미래 발전 가능성이 매우 높습니다.</p>
+            </div>
+
+        </section>
+
+        <!-- 오른쪽 패널: 거대한 분석 그래프 & 탐구 보고서 (7/12) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+
+            <!-- 실시간 시뮬레이션 결과 화면 -->
+            <div class="bg-white/85 backdrop-blur-md rounded-3xl p-6 shadow-md border border-pink-100/40">
+                <div class="flex justify-between items-center mb-5 border-b border-pink-100/30 pb-3">
+                    <h2 class="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-purple-500"></i>
+                        <span id="chart-main-title">가상 인구 추이 (10년 예측)</span>
+                    </h2>
+                    <span class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full font-bold">초기 상태: 100만 명</span>
+                </div>
+
+                <!-- 핵심 3대 예측 지표 -->
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <div class="bg-pink-50/40 p-4 rounded-2xl border border-pink-100/30 text-center">
+                        <span class="text-[10px] text-slate-400 block font-bold">10년 후 총인구</span>
+                        <div class="text-lg md:text-xl font-black text-slate-800 mt-1">
+                            <span id="stat-total-pop" class="text-pink-600">100.0</span>만 명
+                        </div>
+                        <span id="stat-total-change" class="text-[10px] font-bold text-slate-500">변동 없음</span>
+                    </div>
+                    <div class="bg-purple-50/40 p-4 rounded-2xl border border-purple-100/30 text-center">
+                        <span class="text-[10px] text-slate-400 block font-bold">도시 중위연령</span>
+                        <div class="text-lg md:text-xl font-black text-slate-800 mt-1">
+                            <span id="stat-age" class="text-purple-600">43.5</span>세
+                        </div>
+                        <span id="stat-age-status" class="text-[10px] font-bold text-slate-500">고령화 단계</span>
+                    </div>
+                    <div class="bg-teal-50/40 p-4 rounded-2xl border border-teal-100/30 text-center">
+                        <span class="text-[10px] text-slate-400 block font-bold">인구 부양비</span>
+                        <div class="text-lg md:text-xl font-black text-slate-800 mt-1">
+                            <span id="stat-dependency" class="text-teal-600">45.2</span>%
+                        </div>
+                        <span id="stat-dependency-status" class="text-[10px] font-bold text-slate-500">보통 단계</span>
+                    </div>
+                </div>
+
+                <div class="relative w-full h-80 md:h-96">
+                    <canvas id="populationChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 도시 문제 진단 및 정책 권장안 -->
+            <div class="bg-white/85 backdrop-blur-md rounded-3xl p-6 shadow-md border border-pink-100/40">
+                <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass-chart text-teal-500"></i>
+                    도시 문제 진단 및 정책 권장안
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="city-issues-container">
+                    <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex gap-3 items-start" id="issue-card-1">
+                        <div class="text-red-400 text-lg mt-0.5" id="issue-icon-1"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-xs md:text-sm" id="issue-title-1">도시 불균형 위협</h4>
+                            <p class="text-[11px] md:text-xs text-slate-500 mt-1 leading-relaxed" id="issue-desc-1">인구 구성 변화에 따라 특정 분야에서 인프라 불균형이 발생할 가능성이 존재합니다.</p>
+                        </div>
+                    </div>
+                    <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex gap-3 items-start" id="issue-card-2">
+                        <div class="text-orange-400 text-lg mt-0.5" id="issue-icon-2"><i class="fa-solid fa-chart-pie"></i></div>
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-xs md:text-sm" id="issue-title-2">미래 부담 가중</h4>
+                            <p class="text-[11px] md:text-xs text-slate-500 mt-1 leading-relaxed" id="issue-desc-2">생산활동 인구의 비율 변화로 인하여 장기적인 부양 및 사회 비용이 증가할 위험이 있습니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-gradient-to-r from-teal-50/50 via-purple-50/50 to-pink-50/50 p-4 rounded-2xl border border-teal-100/40 flex gap-3.5 items-center">
+                    <div class="text-teal-600 text-xl"><i class="fa-solid fa-lightbulb"></i></div>
+                    <div>
+                        <h4 class="text-xs font-black text-slate-800">지자체 대안 가이드</h4>
+                        <p class="text-[11px] text-slate-500 mt-1 leading-relaxed" id="policy-recommendation">지속 가능한 공간 관리를 위한 도시 계획 수정안이 자동으로 제시됩니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 형성평가 퀴즈 영역 -->
+            <div class="bg-white rounded-3xl p-6 shadow-md border-2 border-teal-100">
+                <div class="flex justify-between items-center mb-4 border-b border-teal-100/50 pb-3">
+                    <h2 class="text-lg font-black text-teal-800 flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-vertical text-teal-500"></i>
+                        배운 내용 스스로 확인하기 (형성평가)
+                    </h2>
+                    <span class="text-xs text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full font-bold">총 3문항</span>
+                </div>
+                
+                <div class="space-y-5 text-xs">
+                    <!-- 문제 1 -->
+                    <div class="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                        <span class="font-black text-teal-600 block mb-2">Q1. 다음 중 인구의 '사회적 증감'을 결정하는 가장 핵심적인 요소는 무엇인가요?</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-teal-50/40">
+                                <input type="radio" name="quiz-q1" value="A" class="accent-teal-500"> <span>① 출생률과 사망률</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-teal-50/40">
+                                <input type="radio" name="quiz-q1" value="B" class="accent-teal-500"> <span>② 전입률과 전출률</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 문제 2 -->
+                    <div class="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                        <span class="font-black text-teal-600 block mb-2">Q2. 전체 인구 중 65세 이상의 노년층 비율이 20%를 초과하는 사회를 무엇이라 하나요?</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-teal-50/40">
+                                <input type="radio" name="quiz-q2" value="A" class="accent-teal-500"> <span>① 고령화 사회</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-teal-50/40">
+                                <input type="radio" name="quiz-q2" value="B" class="accent-teal-500"> <span>② 초고령 사회</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- text/question 3 -->
+                    <div class="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                        <span class="font-black text-teal-600 block mb-2">Q3. 인근 대도시의 교외화 현상으로 주택 단지는 조밀하지만 자족 일자리가 없어 생기는 도시 문제를 무엇이라 하나요?</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-teal-50/40">
+                                <input type="radio" name="quiz-q3" value="A" class="accent-teal-500"> <span>① 위성도시의 베드타운화</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-teal-50/40">
+                                <input type="radio" name="quiz-q3" value="B" class="accent-teal-500"> <span>② 중심 업무 지구의 집중화</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 과제 탐구 보고서 -->
+            <div class="bg-white rounded-3xl p-6 shadow-md border border-pink-100/60">
+                <div class="flex justify-between items-center mb-5 border-b-2 border-pink-100/40 pb-3">
+                    <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-invoice text-pink-400"></i>
+                        학생 사회과 과제 탐구 보고서
+                    </h2>
+                    <span class="text-xs text-pink-500 bg-pink-50 px-3 py-1 rounded-full font-bold">수행 평가 제출용</span>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">학년</label>
+                        <input type="text" id="student-grade" placeholder="예: 3학년" class="w-full bg-slate-50/50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-pink-300">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">학반</label>
+                        <input type="text" id="student-class" placeholder="예: 2반" class="w-full bg-slate-50/50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-pink-300">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">번호</label>
+                        <input type="text" id="student-number" placeholder="예: 7번" class="w-full bg-slate-50/50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-pink-300">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">이름</label>
+                        <input type="text" id="student-name" placeholder="이름 입력" class="w-full bg-slate-50/50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-pink-300">
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1.5">
+                            ① 설정 변수 및 시뮬레이션 결과 요약 (또는 선택한 지역 통계값 기입)
+                        </label>
+                        <div class="bg-pink-50/30 p-3 rounded-xl border border-pink-100/50 mb-2 flex justify-between items-center">
+                            <span class="text-[11px] text-slate-500">현재 좌측 패널의 분석 결과를 여기에 연동합니다.</span>
+                            <button type="button" onclick="loadCurrentStatsToReport()" class="text-xs bg-gradient-to-r from-pink-300 to-purple-300 text-slate-800 font-bold py-1.5 px-3 rounded-lg shadow-sm hover:opacity-90 transition">
+                                <i class="fa-solid fa-share-from-square mr-1"></i> 데이터 불러오기
+                            </button>
+                        </div>
+                        <textarea id="report-input-1" rows="3" placeholder="불러오기 버튼을 누르면 인구분석 통계가 즉각 정렬 및 기록됩니다." class="w-full bg-slate-50/50 border border-slate-200/80 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-pink-300"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1.5">
+                            ② 관찰된 가상 도시 혹은 실제 행정구역의 주된 도시 문제 진단
+                        </label>
+                        <textarea id="report-input-2" rows="2" placeholder="예: 젊은 층 유출 속도가 빨라 학령 인구가 소멸하고 대중교통 노선이 폐쇄되고 있으며, 고령층 전용 기반시설이 부족한 양상이 관찰되었습니다." class="w-full bg-slate-50/50 border border-slate-200/80 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-pink-300"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1.5">
+                            ③ 인구 복구 및 도시 재생을 위해 교과서 또는 실생활에서 도출할 수 있는 정책 제언
+                        </label>
+                        <textarea id="report-input-3" rows="2" placeholder="예: 육아 친화적 공유 오피스 환경 구축과 공공 스마트 임대주택 건립을 연계하고, 청년 일자리 보조금을 신설하는 대안이 필요합니다." class="w-full bg-slate-50/50 border border-slate-200/80 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-pink-300"></textarea>
+                    </div>
+
+                    <!-- 교사 피드백 확인 란 -->
+                    <div id="student-feedback-view" class="hidden p-4 rounded-2xl border-2 border-indigo-200 bg-indigo-50/40 space-y-2">
+                        <h4 class="font-extrabold text-xs text-indigo-900 flex items-center gap-2">
+                            <i class="fa-solid fa-comment-medical text-indigo-500"></i>
+                            지도 교사의 피드백 코멘트가 도착했습니다!
+                        </h4>
+                        <div id="student-feedback-text" class="text-xs text-indigo-950 font-medium whitespace-pre-line leading-relaxed">
+                            피드백 분석 중...
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="button" id="btn-submit" onclick="submitStudentReport()" class="w-full bg-gradient-to-r from-pink-400 via-purple-400 to-teal-400 hover:opacity-90 text-slate-900 font-extrabold py-3.5 px-6 rounded-2xl shadow-md text-sm transition flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            수행평가 보고서 최종 제출하기 (교사용 전송)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </div>
+
+    <!-- 푸터 -->
+    <footer class="text-center py-8 text-slate-400 text-xs mt-12 border-t border-slate-200/50">
+        <p>© 2026 중학 사회과 인구 교육 콘텐츠 - 수채화 파스텔 시뮬레이터</p>
+    </footer>
+
+    <!-- Firebase SDK 모듈 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Config 로드
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'population-class-simulator';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { 
+                apiKey: "YOUR_API_KEY", 
+                authDomain: "YOUR_AUTH_DOMAIN", 
+                projectId: "YOUR_PROJECT_ID", 
+                storageBucket: "YOUR_STORAGE_BUCKET", 
+                messagingSenderId: "YOUR_MESSAGING_SENDER_ID", 
+                appId: "YOUR_APP_ID" 
+              };
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let user = null;
+        let mySubmissionId = localStorage.getItem('MY_SUBMISSION_ID') || null;
+
+        // 인증 로드 (Rule 3 준수)
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.error("인증 도중 오류 발생:", e);
+            }
+        };
+
+        initAuth();
+
+        onAuthStateChanged(auth, (usr) => {
+            if (usr) {
+                user = usr;
+                console.log("Firestore 익명 로그인 성공 UID:", user.uid);
+                if (mySubmissionId) {
+                    listenToFeedback(mySubmissionId);
+                }
+            }
+        });
+
+        // 실시간 피드백 리스너 활성화
+        function listenToFeedback(subId) {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'submissions', subId);
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.feedbacked && data.feedback) {
+                        const feedbackView = document.getElementById('student-feedback-view');
+                        const feedbackText = document.getElementById('student-feedback-text');
+                        feedbackView.classList.remove('hidden');
+                        feedbackText.textContent = data.feedback;
+                        showNotification("👩‍🏫 지도 선생님이 새로운 피드백을 전달하셨습니다!", "success");
+                    }
+                }
+            }, (error) => {
+                console.warn("피드백 리스너 오류:", error);
+            });
+        }
+
+        // 과제 제출
+        window.submitStudentReport = async function() {
+            if (!user) {
+                showNotification("네트워크와 동기화 중입니다. 2~3초 뒤에 다시 눌러주세요.", "error");
+                return;
+            }
+
+            const grade = document.getElementById('student-grade').value.trim();
+            const sClass = document.getElementById('student-class').value.trim();
+            const num = document.getElementById('student-number').value.trim();
+            const name = document.getElementById('student-name').value.trim();
+
+            if (!grade || !sClass || !num || !name) {
+                showNotification("학적 정보를 빠짐없이 명확하게 입력하세요.", "error");
+                return;
+            }
+
+            const rep1 = document.getElementById('report-input-1').value.trim();
+            const rep2 = document.getElementById('report-input-2').value.trim();
+            const rep3 = document.getElementById('report-input-3').value.trim();
+
+            if (!rep1 || !rep2 || !rep3) {
+                showNotification("사회 보고서 질문에 답변을 모두 성실하게 작성해야 합니다.", "error");
+                return;
+            }
+
+            const q1 = document.querySelector('input[name="quiz-q1"]:checked');
+            const q2 = document.querySelector('input[name="quiz-q2"]:checked');
+            const q3 = document.querySelector('input[name="quiz-q3"]:checked');
+
+            if (!q1 || !q2 || !q3) {
+                showNotification("형성평가 퀴즈 3문제를 모두 풀고 제출해야 합니다.", "error");
+                return;
+            }
+
+            let score = 0;
+            if (q1.value === "B") score++;
+            if (q2.value === "B") score++;
+            if (q3.value === "A") score++;
+
+            // 신규 ID 혹은 기존 ID 재활용 (Strict Path - Rule 1 준수)
+            const newId = mySubmissionId || ("sub_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4));
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+            const payload = {
+                id: newId,
+                grade,
+                class: sClass,
+                number: num,
+                name,
+                conditions: rep1,
+                diagnosis: rep2,
+                policy: rep3,
+                quizScore: score,
+                timestamp,
+                feedback: "",
+                feedbacked: false,
+                uid: user.uid
+            };
+
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1"></i> 보고서 서버 저장 중...`;
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'submissions', newId);
+                await setDoc(docRef, payload);
+
+                localStorage.setItem('MY_SUBMISSION_ID', newId);
+                mySubmissionId = newId;
+
+                showNotification(`수행평가 제출이 완료되었습니다! 형성평가 점수: ${score}/3점`);
+                listenToFeedback(newId);
+            } catch (err) {
+                console.error("데이터 저장 실패:", err);
+                showNotification("네트워크 통신 불안정으로 저장하지 못했습니다. 다시 시도해주세요.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> 수행평가 보고서 최종 제출하기 (교사용 전송)`;
+            }
+        };
+    </script>
+
+    <!-- 인터랙션 스크립트 -->
+    <script>
+        let myChart = null;
+        let currentMode = 'sim';
+
+        // 실제 KOSIS 기준 데이터 목업 (2019 ~ 2024년 합계출산율 데이터)
+        const kosisData = {
+            seoul: { name: '서울특별시', values: [0.717, 0.642, 0.626, 0.592, 0.552, 0.521] },
+            gyeonggi: { name: '경기도', values: [0.943, 0.878, 0.853, 0.839, 0.771, 0.742] },
+            sejong: { name: '세종특별자치시', values: [1.472, 1.277, 1.277, 1.121, 0.972, 0.934] },
+            busan: { name: '부산광역시', values: [0.832, 0.747, 0.728, 0.721, 0.662, 0.631] },
+            jeonnam: { name: '전라남도', values: [1.234, 1.145, 1.017, 0.969, 0.971, 0.922] },
+            korea: { name: '대한민국 전체', values: [0.918, 0.837, 0.808, 0.778, 0.721, 0.684] }
+        };
+
+        window.onload = function() {
+            initChart();
+            updateSimulator();
+        };
+
+        function showNotification(message, type = "success") {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-2xl shadow-lg border text-xs font-bold transition-all duration-300 transform translate-y-2 pointer-events-auto flex items-center gap-2 ${
+                type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' : 'bg-rose-50 text-rose-800 border-rose-100'
+            }`;
+            toast.innerHTML = type === 'success' 
+                ? `<i class="fa-solid fa-circle-check text-emerald-500"></i> ${message}`
+                : `<i class="fa-solid fa-circle-exclamation text-rose-500"></i> ${message}`;
+            
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const tabSim = document.getElementById('tab-sim');
+            const tabKosis = document.getElementById('tab-kosis');
+            const panelSim = document.getElementById('panel-sim');
+            const panelKosis = document.getElementById('panel-kosis');
+            const mainTitle = document.getElementById('chart-main-title');
+
+            if (mode === 'sim') {
+                tabSim.className = "flex-1 py-3 text-center rounded-xl text-sm font-bold transition-all duration-300 bg-gradient-to-r from-pink-100/80 to-purple-100/80 text-slate-800 shadow-sm border border-pink-100/20";
+                tabKosis.className = "flex-1 py-3 text-center rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 hover:bg-slate-50";
+                panelSim.classList.remove('hidden');
+                panelKosis.classList.add('hidden');
+                mainTitle.textContent = "가상 인구 추이 (10년 예측)";
+                updateSimulator();
+            } else {
+                tabKosis.className = "flex-1 py-3 text-center rounded-xl text-sm font-bold transition-all duration-300 bg-gradient-to-r from-teal-100/80 to-indigo-100/80 text-slate-800 shadow-sm border border-teal-100/20";
+                tabSim.className = "flex-1 py-3 text-center rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 hover:bg-slate-50";
+                panelSim.classList.add('hidden');
+                panelKosis.classList.remove('hidden');
+                mainTitle.textContent = "KOSIS 실제 출산율 변화 추세";
+                updateKosisVisualization();
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('populationChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['현재', '2년후', '4년후', '6년후', '8년후', '10년후'],
+                    datasets: [{
+                        label: '예측 인구수 (단위: 만 명)',
+                        data: [100, 100, 100, 100, 100, 100],
+                        borderColor: '#a78bfa',
+                        backgroundColor: 'rgba(167, 139, 250, 0.15)',
+                        borderWidth: 4,
+                        fill: true,
+                        tension: 0.45,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#f472b6',
+                        pointBorderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(244, 114, 182, 0.05)' },
+                            ticks: { font: { family: 'Noto Sans KR', size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Noto Sans KR', size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSimulator() {
+            if (currentMode !== 'sim') return;
+
+            const birthRate = parseInt(document.getElementById('birth-rate').value);
+            const moveInRate = parseInt(document.getElementById('move-in-rate').value);
+
+            document.getElementById('birth-val').textContent = birthRate + ' 명';
+            document.getElementById('move-val').textContent = (moveInRate >= 0 ? '+' : '') + moveInRate + ' %';
+
+            const naturalGrowth = (birthRate - 8) / 10; 
+            const socialGrowth = moveInRate - 2; 
+            const growthRate = naturalGrowth + socialGrowth;
+
+            let pop = 100.0;
+            const points = [100.0];
+            for (let i = 1; i <= 5; i++) {
+                pop = pop * Math.pow((1 + (growthRate / 100)), 2);
+                points.push(parseFloat(pop.toFixed(1)));
+            }
+
+            const finalPop = points[points.length - 1];
+            const diffPct = (((finalPop - 100) / 100) * 100).toFixed(1);
+
+            document.getElementById('stat-total-pop').textContent = finalPop;
+            const changeEl = document.getElementById('stat-total-change');
+            if (diffPct > 0) {
+                changeEl.textContent = `+${diffPct}% 증가`;
+                changeEl.className = "text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full";
+            } else if (diffPct < 0) {
+                changeEl.textContent = `${diffPct}% 감소`;
+                changeEl.className = "text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full";
+            } else {
+                changeEl.textContent = "변동 없음";
+                changeEl.className = "text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full";
+            }
+
+            let midAge = 43.5 + (12 - birthRate) * 0.45 - (moveInRate - 2) * 0.6;
+            midAge = parseFloat(Math.max(25.0, Math.min(68.0, midAge)).toFixed(1));
+            document.getElementById('stat-age').textContent = midAge;
+
+            const ageStatus = document.getElementById('stat-age-status');
+            if (midAge >= 52) {
+                ageStatus.textContent = "소멸 위험 경고";
+                ageStatus.className = "text-[10px] font-bold text-rose-600";
+            } else if (midAge >= 45) {
+                ageStatus.textContent = "초고령 국가화";
+                ageStatus.className = "text-[10px] font-bold text-amber-500";
+            } else {
+                ageStatus.textContent = "안정 구조 유지";
+                ageStatus.className = "text-[10px] font-bold text-emerald-600";
+            }
+
+            const depRatio = parseFloat((midAge * 1.15).toFixed(1));
+            document.getElementById('stat-dependency').textContent = depRatio;
+
+            const depStatus = document.getElementById('stat-dependency-status');
+            if (depRatio > 55) {
+                depStatus.textContent = "생산인구 과부하";
+                depStatus.className = "text-[10px] font-bold text-rose-600";
+            } else {
+                depStatus.textContent = "부양 부담 완화";
+                depStatus.className = "text-[10px] font-bold text-teal-600";
+            }
+
+            updateCityPrescription(birthRate, moveInRate, finalPop, midAge);
+
+            if (myChart) {
+                myChart.data.labels = ['현재', '2년후', '4년후', '6년후', '8년후', '10년후'];
+                myChart.data.datasets[0].data = points;
+                myChart.data.datasets[0].label = "예측 인구수 (단위: 만 명)";
+                myChart.data.datasets[0].borderColor = '#a78bfa';
+                myChart.data.datasets[0].backgroundColor = 'rgba(167, 139, 250, 0.15)';
+                myChart.options.scales.y.min = Math.floor(Math.min(...points) - 5);
+                myChart.options.scales.y.max = Math.ceil(Math.max(...points) + 5);
+                myChart.update();
+            }
+        }
+
+        function updateCityPrescription(birth, move, finalPop, age) {
+            const badge = document.getElementById('city-type-badge');
+            const name = document.getElementById('city-name-display');
+            const desc = document.getElementById('city-status-desc');
+            const container = document.getElementById('city-state-card');
+
+            const issueTitle1 = document.getElementById('issue-title-1');
+            const issueDesc1 = document.getElementById('issue-desc-1');
+            const issueTitle2 = document.getElementById('issue-title-2');
+            const issueDesc2 = document.getElementById('issue-desc-2');
+            const recommendation = document.getElementById('policy-recommendation');
+
+            if (move < 0 && birth < 11) {
+                badge.textContent = "지방 소멸 경고 도시";
+                name.textContent = "쇠퇴 한계형 '지방 소도시'";
+                desc.textContent = "청장년층 유입이 전혀 없고 출산율도 급감하여 인구 피라미드의 허리가 무너지고 있는 소멸 위험 고위험 지대입니다.";
+                container.className = "bg-rose-50/90 backdrop-blur-md rounded-3xl p-6 shadow-md border border-rose-200/40 transition-all duration-300";
+                
+                issueTitle1.textContent = "기반시설 유지의 한계";
+                issueDesc1.textContent = "학생수 소멸로 인한 학교 전면 통폐합 및 지역 유일 응급실 부재 상황이 예고됩니다.";
+                issueTitle2.textContent = "로컬 비즈니스 붕괴";
+                issueDesc2.textContent = "전통 상권 및 마트 폐점, 일자리 감소로 생활 자립도가 마비 수준에 봉착합니다.";
+                recommendation.textContent = "스마트 컴팩트 시티 재조정, 영유아 지원 바우처 연계 및 교통 네트워크 중심의 거점 집중 개발 대책을 전개하십시오.";
+            } else if (move > 4 && birth < 11) {
+                badge.textContent = "베드타운 신도시";
+                name.textContent = "주거 밀착형 '베드타운 위성도시'";
+                desc.textContent = "대도시 주택가 충격 흡수로 세대 전입은 늘지만, 출산 복지가 결여되어 자체 회복력은 취약한 베드타운 유형입니다.";
+                container.className = "bg-blue-50/90 backdrop-blur-md rounded-3xl p-6 shadow-md border border-blue-200/40 transition-all duration-300";
+
+                issueTitle1.textContent = "자족 기회 및 일자리 부재";
+                issueDesc1.textContent = "주거 기능에 치중하여 생산 능력이 결여되고 시 행정의 부채 가중이 염려됩니다.";
+                issueTitle2.textContent = "돌봄 복지 시설 경쟁 격화";
+                issueDesc2.textContent = "청소년 및 젊은 인프라 대비 보육, 의료 시설의 양적 격차로 부조화가 관찰됩니다.";
+                recommendation.textContent = "첨단 지식산업 단지 유치 세제 혜택 부여, 국공립 어린이집 권역별 신설 및 인프라 순환 모델 구축을 제안합니다.";
+            } else if (move > 4 && birth >= 11) {
+                badge.textContent = "고속 확장 팽창 도시";
+                name.textContent = "활력 성장형 '첨단 거점 도시'";
+                desc.textContent = "강력한 청년층 전입과 긍정적 출산 환경이 결합하여 전 생애 주기가 팽창하는 가장 유망한 성장형 도시입니다.";
+                container.className = "bg-emerald-50/90 backdrop-blur-md rounded-3xl p-6 shadow-md border border-emerald-200/40 transition-all duration-300";
+
+                issueTitle1.textContent = "부동산 주거비용 급등";
+                issueDesc1.textContent = "가파른 가치 상승으로 서민층 주거 불안정이 가중되고 젠트리피케이션이 우려됩니다.";
+                issueTitle2.textContent = "급격한 출퇴근 교통 병목";
+                issueDesc2.textContent = "간선도로망 확충 속도가 인구 유입 속도를 따라가지 못해 극단적 교통 피로가 있습니다.";
+                recommendation.textContent = "공공 영구임대 분양 제도 다양화, 광역 간선 급행 버스 노선 즉각 투입 및 생활 SOC 순차 배치로 과부하를 예방하세요.";
+            } else {
+                badge.textContent = "균형 안착 도시";
+                name.textContent = "안정 관리형 '정주 정형 도시'";
+                desc.textContent = "전 생애 세대의 유입 비율과 자연 성장이 균형을 이뤄, 서서히 체질 전환을 도모하고 있는 모범 도시입니다.";
+                container.className = "bg-white/85 backdrop-blur-md rounded-3xl p-6 shadow-md border border-pink-100/40 transition-all duration-300";
+
+                issueTitle1.textContent = "점진적인 생활 인프라 개편";
+                issueDesc1.textContent = "신규 과밀 지대와 노후화 구도심 간의 부분 불균형이 서서히 태동할 수 있습니다.";
+                issueTitle2.textContent = "생애 돌봄 공백의 미세 양극화";
+                issueDesc2.textContent = "시니어 여가 요구와 보육 돌봄 정책의 예산 파이 다툼이 점진적으로 노출됩니다.";
+                recommendation.textContent = "가족 단위 거주 공간의 친환경 그린화, 세대 공생 종합 복지 플랫폼 설립 및 중소형 스마트 인프라 리모델링을 주안점으로 잡아야 합니다.";
+            }
+        }
+
+        function updateKosisVisualization() {
+            if (currentMode !== 'kosis') return;
+
+            const regionKey = document.getElementById('kosis-region').value;
+            const yearRange = document.getElementById('kosis-year-range').value;
+            const dataObj = kosisData[regionKey];
+
+            document.getElementById('current-kosis-region-label').textContent = dataObj.name;
+
+            let labels = ['2019년', '2020년', '2021년', '2022년', '2023년', '2024년'];
+            let values = [...dataObj.values];
+
+            if (yearRange === 'recent') {
+                labels = ['2022년', '2023년', '2024년'];
+                values = values.slice(3);
+            }
+
+            const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(3);
+            document.getElementById('current-kosis-avg-val').textContent = avg;
+
+            if (myChart) {
+                myChart.data.labels = labels;
+                myChart.data.datasets[0].data = values;
+                myChart.data.datasets[0].label = `${dataObj.name} 합계출산율 Trend`;
+                myChart.data.datasets[0].borderColor = '#0d9488';
+                myChart.data.datasets[0].backgroundColor = 'rgba(13, 148, 136, 0.1)';
+                myChart.options.scales.y.min = 0.3;
+                myChart.options.scales.y.max = 1.6;
+                myChart.update();
+            }
+        }
+
+        function loadCurrentStatsToReport() {
+            if (currentMode === 'sim') {
+                const b = document.getElementById('birth-rate').value;
+                const m = document.getElementById('move-in-rate').value;
+                const p = document.getElementById('stat-total-pop').textContent;
+                const a = document.getElementById('stat-age').textContent;
+                const city = document.getElementById('city-name-display').textContent;
+
+                document.getElementById('report-input-1').value = 
+                    `[가상 탐구 모델 데이터 요약]
+- 가상 입력 변수: 연간 출생률 ${b}명(천 명당) / 전입률 ${m >= 0 ? '+' : ''}${m}%
+- 10년 후 예측 인구수: ${p}만 명 / 중위연령: ${a}세
+- 판정형 도시 유형: "${city}"`;
+            } else {
+                const regLabel = document.getElementById('current-kosis-region-label').textContent;
+                const avgVal = document.getElementById('current-kosis-avg-val').textContent;
+                document.getElementById('report-input-1').value = 
+                    `[KOSIS 국가통계포털 연계 탐구 결과]
+- 탐색 행정구역: ${regLabel}
+- 조회 연도 평균 합계출산율: ${avgVal}명
+- 해당 지역은 인구 유지선(2.1명)에 미치지 못하는 저출산 인구 소멸 구조를 나타냅니다.`;
+            }
+            showNotification("보고서 양식에 인구 데이터를 자동 입력했습니다.");
+        }
+
+        function resetSimulator() {
+            document.getElementById('birth-rate').value = 12;
+            document.getElementById('move-in-rate').value = 2;
+            document.getElementById('student-grade').value = "";
+            document.getElementById('student-class').value = "";
+            document.getElementById('student-number').value = "";
+            document.getElementById('student-name').value = "";
+            document.getElementById('report-input-1').value = "";
+            document.getElementById('report-input-2').value = "";
+            document.getElementById('report-input-3').value = "";
+            
+            const radios = document.querySelectorAll('input[type="radio"]');
+            radios.forEach(r => r.checked = false);
+
+            if (currentMode === 'sim') {
+                updateSimulator();
+            } else {
+                updateKosisVisualization();
+            }
+            showNotification("입력 및 제어 판넬을 초기화했습니다.", "success");
+        }
+    </script>
+</body>
+</html>
